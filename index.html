@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>InDriver Income</title>
+    <meta name="theme-color" content="#121212">
+    <meta name="description" content="Simple offline income tracker for drivers">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>My Income</h1>
+            <div class="total-card">
+                <span class="label">Total Earnings</span>
+                <h2 id="total-amount">0 EGP</h2>
+            </div>
+        </header>
+
+        <main>
+            <div class="input-group">
+                <input type="number" id="income-input" placeholder="Enter amount (EGP)" inputmode="decimal">
+                <button id="add-btn" onclick="addIncome()">Add Income</button>
+            </div>
+
+            <div class="list-header">
+                <h3>History</h3>
+                <button class="clear-btn" onclick="confirmClear()">Clear All</button>
+            </div>
+            
+            <ul id="income-list" class="income-list">
+                <!-- List items will be injected here -->
+                <li class="empty-state">No rides recorded yet.</li>
+            </ul>
+        </main>
+    </div>
+
+    <!-- Simple confirmation modal -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <p>Are you sure you want to delete all entries?</p>
+            <div class="modal-actions">
+                <button class="secondary-btn" onclick="closeModal()">Cancel</button>
+                <button class="danger-btn" onclick="clearAllData()">Yes, Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed', err));
+            });
+        }
+    </script>
+</body>
+</html>
