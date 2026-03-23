@@ -683,4 +683,429 @@ function dismissUndoToast() {
         _undoTimer = null;
     }
 }
+
+    const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const netIncome = totalIncome - totalExpenses;
+    
+    // Build CSV content
+    let csvContent = 'Type,Amount (EGP),Category,Date\n';
+    
+    // Add incomes
+    incomes.forEach(income => {
+        csvContent += `Income,${income.amount},-,"${income.date}"\n`;
+    });
+    
+    // Add expenses
+    expenses.forEach(expense => {
+        csvContent += `Expense,${expense.amount},"${expense.category}","${expense.date}"\n`;
+    });
+    
+    // Add net income row
+    csvContent += `NET INCOME,${netIncome},-,-\n`;
+    
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const today = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `indriver-report-${today}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function exportPDF() {
+    const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const netIncome = totalIncome - totalExpenses;
+    
+    // Combine and sort all transactions by date (newest first)
+    const allTransactions = [
+        ...incomes.map(item => ({ ...item, type: 'Income' })),
+        ...expenses.map(item => ({ ...item, type: 'Expense' }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Generate HTML content
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>InDriver Income Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2E7D32;
+            font-size: 28px;
+        }
+        .date {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .summary {
+            margin-bottom: 30px;
+        }
+        .summary h2 {
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .summary-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .income { color: #2E7D32; font-weight: bold; }
+        .expense { color: #FF9800; font-weight: bold; }
+        .net-positive { color: #2E7D32; font-weight: bold; }
+        .net-negative { color: #FF5252; font-weight: bold; }
+        .transactions {
+            margin-top: 30px;
+        }
+        .transactions h2 {
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+        .transaction-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .transaction-table th, .transaction-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .transaction-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .transaction-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        @media print {
+            body { margin: 15px; }
+            .header { page-break-after: avoid; }
+            .summary, .transactions { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>InDriver Income Report</h1>
+        <div class="date">Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+    </div>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <table class="summary-table">
+            <tr>
+                <th>Total Income</th>
+                <td class="income">${totalIncome.toLocaleString()} EGP</td>
+            </tr>
+            <tr>
+                <th>Total Expenses</th>
+                <td class="expense">${totalExpenses.toLocaleString()} EGP</td>
+            </tr>
+            <tr>
+                <th>Net Income</th>
+                <td class="${netIncome >= 0 ? 'net-positive' : 'net-negative'}">${netIncome.toLocaleString()} EGP</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="transactions">
+        <h2>All Transactions</h2>
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Amount (EGP)</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${allTransactions.map(transaction => `
+                    <tr>
+                        <td>${transaction.date}</td>
+                        <td>${transaction.type}</td>
+                        <td class="${transaction.type.toLowerCase() === 'income' ? 'income' : 'expense'}">${transaction.amount.toLocaleString()}</td>
+                        <td>${transaction.category || '-'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
+</body>
+</html>`;
+    
+    // Open new window with content
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+}
+
+function initChart() {
+    const canvas = document.getElementById('earnings-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Income',
+                    backgroundColor: '#69F0AE',
+                    data: []
+                },
+                {
+                    label: 'Expenses',
+                    backgroundColor: '#FF9800',
+                    data: []
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#B0B0B0'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#B0B0B0'
+                    },
+                    grid: {
+                        color: 'rgba(255,255,255,0.06)'
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#B0B0B0'
+                    },
+                    grid: {
+                        color: 'rgba(255,255,255,0.06)'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function getDateKey(dateStr) {
+    return dateStr.split(' ')[0];
+}
+
+function updateChart(mode) {
+    if (!chartInstance) return;
+    
+    if (mode === 'weekly') {
+        const labels = [];
+        const incomeData = [];
+        const expenseData = [];
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateKey = date.toLocaleDateString();
+            labels.push(dateKey);
+            
+            const dayIncome = incomes
+                .filter(item => getDateKey(item.date) === dateKey)
+                .reduce((sum, item) => sum + item.amount, 0);
+            incomeData.push(dayIncome);
+            
+            const dayExpenses = expenses
+                .filter(item => getDateKey(item.date) === dateKey)
+                .reduce((sum, item) => sum + item.amount, 0);
+            expenseData.push(dayExpenses);
+        }
+        
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = incomeData;
+        chartInstance.data.datasets[1].data = expenseData;
+    } else if (mode === 'monthly') {
+        const labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        const incomeData = [0, 0, 0, 0];
+        const expenseData = [0, 0, 0, 0];
+        
+        const today = new Date();
+        
+        incomes.forEach(item => {
+            const itemDate = new Date(item.date);
+            const daysDiff = Math.floor((today - itemDate) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff <= 6) incomeData[0] += item.amount;
+            else if (daysDiff <= 13) incomeData[1] += item.amount;
+            else if (daysDiff <= 20) incomeData[2] += item.amount;
+            else if (daysDiff <= 27) incomeData[3] += item.amount;
+        });
+        
+        expenses.forEach(item => {
+            const itemDate = new Date(item.date);
+            const daysDiff = Math.floor((today - itemDate) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff <= 6) expenseData[0] += item.amount;
+            else if (daysDiff <= 13) expenseData[1] += item.amount;
+            else if (daysDiff <= 20) expenseData[2] += item.amount;
+            else if (daysDiff <= 27) expenseData[3] += item.amount;
+        });
+        
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = incomeData.reverse();
+        chartInstance.data.datasets[1].data = expenseData.reverse();
+    }
+    
+    chartInstance.update();
+}
+
+function updateStats() {
+    const todayKey = new Date().toLocaleDateString();
+    
+    // Today's income
+    const statToday = incomes
+        .filter(item => getDateKey(item.date) === todayKey)
+        .reduce((sum, item) => sum + item.amount, 0);
+    
+    // This week's income (last 7 days)
+    const last7Days = new Set();
+    for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        last7Days.add(date.toLocaleDateString());
+    }
+    
+    const statWeek = incomes
+        .filter(item => last7Days.has(getDateKey(item.date)))
+        .reduce((sum, item) => sum + item.amount, 0);
+    
+    // Best day
+    const dailyTotals = {};
+    incomes.forEach(item => {
+        const dateKey = getDateKey(item.date);
+        dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + item.amount;
+    });
+    
+    const statBest = Object.values(dailyTotals).length > 0 
+        ? Math.max(...Object.values(dailyTotals))
+        : 0;
+    
+    document.getElementById('stat-today').textContent = statToday.toLocaleString() + ' EGP';
+    document.getElementById('stat-week').textContent = statWeek.toLocaleString() + ' EGP';
+    document.getElementById('stat-best').textContent = statBest.toLocaleString() + ' EGP';
+}
+
+function switchTab(mode) {
+    activeTab = mode;
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.getElementById('tab-' + mode).classList.add('active');
+    updateChart(mode);
+}
+
+function renderAnalytics() {
+    updateStats();
+    updateChart(activeTab);
+}
+
+function setDailyGoal() {
+    const goalInput = document.getElementById('goal-input');
+    const value = parseFloat(goalInput.value);
+    
+    if (!value || value <= 0) {
+        alert('Please enter a valid goal amount');
+        return;
+    }
+    
+    dailyGoal = value;
+    localStorage.setItem('indriver_daily_goal', dailyGoal);
+    renderGoal();
+    
+    goalInput.value = '';
+    goalInput.blur();
+    if (navigator.vibrate) navigator.vibrate(50);
+}
+
+function renderGoal() {
+    const todayKey = new Date().toLocaleDateString();
+    const todayIncome = incomes
+        .filter(item => getDateKey(item.date) === todayKey)
+        .reduce((sum, item) => sum + item.amount, 0);
+    
+    if (dailyGoal === 0) {
+        document.getElementById('goal-progress-text').textContent = 'Set a goal to track your daily progress';
+        document.getElementById('goal-bar-fill').style.width = '0%';
+        document.getElementById('goal-bar-fill').style.backgroundColor = 'var(--primary-color)';
+        document.getElementById('goal-status').textContent = '';
+        return;
+    }
+    
+    const percent = Math.min((todayIncome / dailyGoal) * 100, 100);
+    
+    document.getElementById('goal-progress-text').textContent = 
+        todayIncome.toLocaleString() + ' / ' + dailyGoal.toLocaleString() + ' EGP';
+    document.getElementById('goal-bar-fill').style.width = percent.toFixed(1) + '%';
+    
+    if (percent >= 100) {
+        document.getElementById('goal-bar-fill').style.backgroundColor = '#69F0AE';
+        document.getElementById('goal-status').textContent = 'Goal reached!';
+        document.getElementById('goal-status').style.color = '#69F0AE';
+    } else if (percent >= 70) {
+        document.getElementById('goal-bar-fill').style.backgroundColor = '#FF9800';
+        document.getElementById('goal-status').textContent = percent.toFixed(0) + '% there — keep going';
+        document.getElementById('goal-status').style.color = '#FF9800';
+    } else {
+        document.getElementById('goal-bar-fill').style.backgroundColor = '#69F0AE';
+        document.getElementById('goal-status').textContent = percent.toFixed(0) + '% of daily goal';
+        document.getElementById('goal-status').style.color = 'var(--text-secondary)';
+    }
+}
 
