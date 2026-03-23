@@ -582,4 +582,105 @@ function deleteExpense(id) {
     if (navigator.vibrate) navigator.vibrate(40);
 }
 
-// --- Undo Last Entry (from last-entry widget) ---
+// --- Undo Last Entry (from last-entry widget) ---
+
+function addQuickFare(amount, btnEl) {
+    if (_chipCooldown) return;
+    _chipCooldown = true;
+
+    addIncome(amount, true);
+
+    if (btnEl) {
+        const originalText = btnEl.textContent;
+        btnEl.textContent = '✓';
+        btnEl.classList.add('chip-confirmed');
+
+        document.querySelectorAll('.fare-chip').forEach(c => c.classList.add('chip-cooldown'));
+
+        setTimeout(() => {
+            btnEl.textContent = originalText;
+            btnEl.classList.remove('chip-confirmed');
+            document.querySelectorAll('.fare-chip').forEach(c => c.classList.remove('chip-cooldown'));
+            _chipCooldown = false;
+        }, 500);
+    } else {
+        setTimeout(() => { _chipCooldown = false; }, 500);
+    }
+}
+
+function undoLastEntry(id, type) {
+    if (type === 'Fare') {
+        const index = incomes.findIndex(inc => inc.id === id);
+        if (index === -1) return;
+        const deleted = incomes.splice(index, 1)[0];
+        saveData();
+        render();
+        showUndoToast(deleted, index, 'income');
+    } else {
+        const index = expenses.findIndex(exp => exp.id === id);
+        if (index === -1) return;
+        const deleted = expenses.splice(index, 1)[0];
+        saveData();
+        render();
+        showUndoToast(deleted, index, 'expense');
+    }
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+}
+
+// --- Toast Undo System ---
+function showUndoToast(entry, originalIndex, type) {
+    // Cancel any previous undo window
+    if (_undoTimer) clearTimeout(_undoTimer);
+
+    _undoState = { entry, originalIndex, type };
+
+    const toastEl = document.getElementById('undo-toast');
+    const textEl = document.getElementById('undo-toast-text') || toastEl.querySelector('.undo-toast-text');
+
+    const label = type === 'income'
+        ? `Fare ${entry.amount} EGP deleted`
+        : `${entry.category || 'Expense'} ${entry.amount} EGP deleted`;
+    textEl.textContent = label;
+
+    toastEl.classList.remove('hidden');
+    toastEl.classList.remove('toast-exit');
+    void toastEl.offsetWidth; // force reflow for re-animation
+    toastEl.classList.add('toast-enter');
+
+    _undoTimer = setTimeout(() => {
+        dismissUndoToast();
+    }, 5000);
+}
+
+function undoDelete() {
+    if (!_undoState) return;
+
+    const { entry, originalIndex, type } = _undoState;
+
+    if (type === 'income') {
+        incomes.splice(originalIndex, 0, entry);
+    } else {
+        expenses.splice(originalIndex, 0, entry);
+    }
+
+    saveData();
+    render();
+    dismissUndoToast();
+    _undoState = null;
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+}
+
+function dismissUndoToast() {
+    const toastEl = document.getElementById('undo-toast');
+    toastEl.classList.remove('toast-enter');
+    toastEl.classList.add('toast-exit');
+    setTimeout(() => {
+        toastEl.classList.add('hidden');
+        toastEl.classList.remove('toast-exit');
+    }, 300);
+    if (_undoTimer) {
+        clearTimeout(_undoTimer);
+        _undoTimer = null;
+    }
+}
+
