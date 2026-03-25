@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.2.0] - 2026-03-26
+### Added
+- Rebranded application from "InDriver Income Tracker" to **FareLog**.
+- Integrated premium new app icon (`iconNew`).
+- Updated project documentation and legal policies for the new brand.
+- Updated repository meta-data and live URL (farelog.netlify.app).
+
 ## [v2.1.0] - 2026-03-26
 ### Added
 - Professional repository cleanup and modularization.
