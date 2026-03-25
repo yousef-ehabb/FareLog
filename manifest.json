@@ -1,11 +1,11 @@
 {
-    "name": "InDriver Income Tracker",
-    "short_name": "InIncome",
-    "start_url": "./index.html",
+    "name": "ShiftLedger",
+    "short_name": "ShiftLedger",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#121212",
     "theme_color": "#121212",
-    "description": "Track your daily driving income offline.",
+    "description": "Offline shift, income, and expense tracking for drivers and gig workers.",
     "orientation": "portrait-primary",
     "icons": [
         {

@@ -1,12 +1,12 @@
-const CACHE_NAME = 'indriver-income-v3';
+const CACHE_NAME = 'shiftledger-static-v1';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './css/style.css?v=20260324-empty-state-fix',
-    './js/app.js?v=20260324-empty-state-fix',
+    './css/app.css',
+    './js/app.js',
     './manifest.json',
     './assets/icon.png',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap'
 ];
 
 // Install Event

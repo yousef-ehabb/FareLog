@@ -1,5 +1,5 @@
 /* ================================================================
-   DESIGN SYSTEM — InDriver Income Tracker
+   DESIGN SYSTEM - ShiftLedger
    
    Spacing Scale: 4, 8, 12, 16, 24, 32
    Typography:    hero (3.5rem), h1 (1.5rem), h2 (1.25rem), 
@@ -586,7 +586,7 @@ body:has(#shift-start-btn:disabled) #tab-home .shift-pre-cta-message {
 }
 
 
-/* ==================== BUTTONS — BASE ==================== */
+/* ==================== BUTTONS - BASE ==================== */
 button {
     cursor: pointer;
     border: none;
@@ -1502,29 +1502,9 @@ body:has(#shift-start-btn:disabled) #tab-home { padding-bottom: 70px; }
 }
 
 
-/* ==================== SELECTS — UNUSED ====================
-   No <select> elements exist in current HTML.
-   Kept for potential future use.                              */
-select {
-    width: 100%;
-    padding: var(--sp-12) var(--sp-16);
-    font-size: 1rem;
-    background-color: var(--surface-2);
-    border: 2px solid transparent;
-    border-radius: var(--r-md);
-    color: var(--text-primary);
-    outline: none;
-    transition: border-color 0.2s;
-    cursor: pointer;
-}
-
-select:focus { border-color: var(--color-expense); }
-option { background-color: var(--surface-2); color: var(--text-primary); }
-
-
 /* ==================== LEGACY STYLES ====================
    Retained for backwards compatibility with dynamically
-   generated HTML in script.js. Do NOT remove without
+   generated HTML in app.js. Do NOT remove without
    verifying every JS innerHTML/template usage.              */
 .total-card { background: transparent; padding: 0; border-radius: 0; box-shadow: none; position: relative; overflow: hidden; }
 .total-card::before { display: none; }
