@@ -1,0 +1,21 @@
+name: Feature Request
+description: Propose a new feature or improvement.
+title: "[FEATURE] <Feature summary>"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: What should the feature do?
+      placeholder: I would like to be able to...
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: Why would this be useful to drivers?
+      placeholder: This would help drivers track...
+    validations:
+      required: true
