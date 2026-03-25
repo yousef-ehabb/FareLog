@@ -1,13 +1,13 @@
 # 🚕 FareLog
 
-[![Version](https://img.shields.io/badge/version-2.1-blue.svg)](https://github.com/yousef-ehabb/IncomeApp)
+[![Version](https://img.shields.io/badge/version-2.1-blue.svg)](https://github.com/yousef-ehabb/FareLog)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![PWA](https://img.shields.io/badge/PWA-Ready-orange.svg)](https://indrivermaster.netlify.app/)
+[![PWA](https://img.shields.io/badge/PWA-Ready-orange.svg)](https://farelog.netlify.app/)
 [![UI Style](https://img.shields.io/badge/UI-Dark%20Mode-black.svg)]()
 
 A professional, offline-capable Progressive Web Application (PWA) specifically designed for ride-sharing drivers (InDriver, Uber, Lyft) to track daily shifts, income, and expenses with zero friction.
 
-**[🚀 Launch Live App →](https://indrivermaster.netlify.app/)**
+**[🚀 Launch Live App →](https://farelog.netlify.app/)**
 
 ---
 
@@ -57,7 +57,7 @@ This application is built with a **modular, vanilla architecture**, avoiding the
 ## 📂 Project Structure
 
 ```text
-📦 IncomeApp
+📦 FareLog
  ┣ 📂 assets/              # App icon & global branding
  ┣ 📂 css/                 # Variable-driven styling (app.css)
  ┣ 📂 docs/                # Project documentation & screenshots
@@ -70,7 +70,7 @@ This application is built with a **modular, vanilla architecture**, avoiding the
 
 ## 🚀 Running Locally
 
-1. Clone the repo: `git clone https://github.com/yousef-ehabb/IncomeApp.git`
+1. Clone the repo: `git clone https://github.com/yousef-ehabb/FareLog.git`
 2. Since service workers require a secure context, serve via local server:
    ```bash
    python -m http.server 8000
@@ -79,7 +79,7 @@ This application is built with a **modular, vanilla architecture**, avoiding the
 
 ## 📱 Mobile Installation
 
-Navigate to [indrivermaster.netlify.app](https://indrivermaster.netlify.app/) in your mobile browser:
+Navigate to [farelog.netlify.app](https://farelog.netlify.app/) in your mobile browser:
 - **Android**: Menu (3 dots) → **"Install App"**
 - **iOS**: Share icon → **"Add to Home Screen"**
 
