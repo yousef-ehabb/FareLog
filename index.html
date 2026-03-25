@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0F0F0F">
     <meta name="description" content="Simple offline income tracker for drivers">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260324-empty-state-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -34,65 +34,61 @@
         <main>
             <!-- ============ TAB 1: SHIFT (HOME) ============ -->
             <section id="tab-home" class="tab-panel active">
-                <header class="hero-header">
-                    <div class="total-card hero-net">
-                        <span class="label">TODAY'S NET</span>
-                        <h2 id="net-income">0</h2>
-                        <span class="currency-label">EGP</span>
-                        <div class="gross-subtitle">Gross: <span id="total-amount">0 EGP</span></div>
+                <div class="home-container">
+                    <div class="shift-top-shell">
+                        <header class="hero-header">
+                            <div class="total-card hero-net">
+                                <span class="label">TODAY'S NET</span>
+                                <h2 id="net-income">0</h2>
+                                <div class="gross-subtitle">Gross: <span id="total-amount">0 EGP</span></div>
+                            </div>
+                        </header>
                     </div>
-                </header>
 
-                <div class="compact-summary">
-                    <div class="list-header" style="display:none;">
-                        <h3>Last Ride Logged</h3>
+                    <div class="shift-activity-shell">
+                        <div class="compact-summary">
+                            <ul id="income-list" class="income-list compact"></ul>
+                            <ul id="expense-list" class="expense-list compact"></ul>
+                        </div>
                     </div>
-                    <ul id="income-list" class="income-list compact">
-                        <li class="empty-state">
-                            <span>Ready to hit the road.</span>
-                        </li>
-                    </ul>
 
-                    <div class="list-header" style="display:none;">
-                        <h3>Last Expense</h3>
-                    </div>
-                    <ul id="expense-list" class="expense-list compact">
-                        <!-- Hidden by default, JS handles this dummy element gracefully -->
-                    </ul>
-                </div>
-
-                <div class="shift-controls-container thumb-zone-bottom">
-                    <button id="shift-start-btn" onclick="startShift()" class="massive-action-btn">START SHIFT</button>
-
-                    <!-- Hidden by default, toggled by JS when shift starts -->
-                    <div id="shift-timer-row" class="active-shift-workspace" style="display:none;">
-                        
-                        <!-- Quick Fare Chips -->
-                        <div class="quick-add-chips">
-                            <button type="button" class="fare-chip" onclick="addQuickFare(30, this)">+30</button>
-                            <button type="button" class="fare-chip" onclick="addQuickFare(50, this)">+50</button>
-                            <button type="button" class="fare-chip" onclick="addQuickFare(100, this)">+100</button>
-                            <button type="button" class="fare-chip" onclick="addQuickFare(150, this)">+150</button>
+                    <div class="shift-controls-container thumb-zone-bottom">
+                        <div id="shift-pre-cta-message" class="shift-pre-cta-message">
+                            <span>Start your shift to begin tracking your earnings</span>
                         </div>
 
-                        <!-- Primary Action: Fare -->
-                        <div class="input-group primary-action">
-                            <input type="number" id="income-input" placeholder="0.00" inputmode="decimal">
-                            <button id="add-btn" onclick="addIncome()" class="micro-interaction-btn">Add Fare</button>
-                        </div>
-                        
-                        <!-- Secondary Action: Expense -->
-                        <div class="input-group secondary-action">
-                            <div class="expense-category-pills">
-                                <button type="button" class="category-pill active" onclick="selectExpenseCategory(this, 'Fuel')">Fuel</button>
-                                <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Car Wash')">Wash</button>
-                                <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Maintenance')">Maint</button>
-                                <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Other')">Other</button>
+                        <button id="shift-start-btn" onclick="startShift()" class="massive-action-btn">START SHIFT</button>
+
+                        <!-- Hidden by default, toggled by JS when shift starts -->
+                        <div id="shift-timer-row" class="active-shift-workspace" style="display:none;">
+                            
+                            <!-- Quick Fare Chips -->
+                            <div class="quick-add-chips">
+                                <button type="button" class="fare-chip" onclick="addQuickFare(30, this)">+30</button>
+                                <button type="button" class="fare-chip" onclick="addQuickFare(50, this)">+50</button>
+                                <button type="button" class="fare-chip" onclick="addQuickFare(100, this)">+100</button>
+                                <button type="button" class="fare-chip" onclick="addQuickFare(150, this)">+150</button>
+                            </div>
+
+                            <!-- Primary Action: Fare -->
+                            <div class="input-group primary-action">
+                                <input type="number" id="income-input" placeholder="0.00" inputmode="decimal">
+                                <button id="add-btn" onclick="addIncome()" class="micro-interaction-btn">Add Fare</button>
                             </div>
                             
-                            <div class="expense-input-row">
-                                <input type="number" id="expense-input" placeholder="Expense" inputmode="decimal" style="height:48px; flex:1;">
-                                <button id="add-expense-btn" onclick="addExpense()" class="micro-interaction-btn-secondary" style="height:48px; padding:0 24px;">Log</button>
+                            <!-- Secondary Action: Expense -->
+                            <div class="input-group secondary-action">
+                                <div class="expense-category-pills">
+                                    <button type="button" class="category-pill active" onclick="selectExpenseCategory(this, 'Fuel')">Fuel</button>
+                                    <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Car Wash')">Wash</button>
+                                    <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Maintenance')">Maint</button>
+                                    <button type="button" class="category-pill" onclick="selectExpenseCategory(this, 'Other')">Other</button>
+                                </div>
+                                
+                                <div class="expense-input-row">
+                                    <input type="number" id="expense-input" placeholder="Expense" inputmode="decimal" style="height:48px; flex:1;">
+                                    <button id="add-expense-btn" onclick="addExpense()" class="micro-interaction-btn-secondary" style="height:48px; padding:0 24px;">Log</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -101,25 +97,29 @@
 
             <!-- ============ TAB 2: HISTORY ============ -->
             <section id="tab-log" class="tab-panel">
-                <div class="tab-panel-header history-header">
-                    <h1>History</h1>
-                    <div class="export-buttons mini-export">
-                        <button id="export-csv-btn" onclick="exportCSV()">CSV</button>
-                        <button id="export-pdf-btn" onclick="exportPDF()">PDF</button>
+                <div class="history-container" id="history-container">
+                    <div class="tab-panel-header history-header">
+                        <h1>History</h1>
+                        <div class="export-buttons mini-export" style="display: flex; gap: 8px; align-items: center;">
+                            <button id="export-csv-btn" onclick="exportCSV()">CSV</button>
+                            <button id="export-pdf-btn" onclick="exportPDF()">PDF</button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden total expenses just to keep JS alive -->
+                    <div style="display:none">
+                        <h3 id="total-expenses">0 EGP</h3>
+                        <button class="clear-btn" onclick="confirmClear()">Clear All</button>
+                    </div>
+
+                    <div class="empty-history">
+                        <ul id="shift-history-list" class="shift-history-list history-tab-view">
+                            <li class="empty-state">
+                                <span>No completed shifts yet.</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
-
-                <!-- Hidden total expenses just to keep JS alive -->
-                <div style="display:none">
-                    <h3 id="total-expenses">0 EGP</h3>
-                    <button class="clear-btn" onclick="confirmClear()">Clear All</button>
-                </div>
-
-                <ul id="shift-history-list" class="shift-history-list history-tab-view">
-                    <li class="empty-state">
-                        <span>No completed shifts yet.</span>
-                    </li>
-                </ul>
             </section>
 
             <!-- ============ TAB 3: ANALYTICS ============ -->
@@ -172,6 +172,10 @@
                         <span id="goal-status"></span>
                     </div>
                 </div>
+
+                <div class="settings-actions">
+                    <button id="reset-app-btn" onclick="confirmResetApp()" class="text-link settings-action-link">Start Fresh</button>
+                </div>
             </section>
         </main>
 
@@ -198,6 +202,18 @@
         </div>
     </div>
 
+    <!-- Start Fresh Reset Modal -->
+    <div id="reset-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 8px;">Start Fresh?</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">This will permanently delete all data (rides, expenses, shifts, and goals). This cannot be undone.</p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="secondary-btn" onclick="closeResetModal()">Cancel</button>
+                <button class="danger-btn" onclick="executeResetApp()">Reset</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Simple confirmation modal -->
     <div id="confirm-modal" class="modal hidden">
         <div class="modal-content">
@@ -212,7 +228,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
+    <script src="js/app.js?v=20260324-empty-state-fix"></script>
     <script>
         // Register Service Worker
         if ('serviceWorker' in navigator) {
@@ -239,6 +255,10 @@
                 }
             });
         });
+
+
     </script>
 </body>
 </html>
+
+

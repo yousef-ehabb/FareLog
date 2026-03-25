@@ -1,14 +1,45 @@
 // State
-let incomes = JSON.parse(localStorage.getItem('indriver_incomes')) || [];
-let expenses = JSON.parse(localStorage.getItem('indriver_expenses')) || [];
+let incomes = [];
+let expenses = [];
 let chartInstance = null;
 let activeTab = 'weekly';
-let dailyGoal = parseFloat(localStorage.getItem('indriver_daily_goal')) || 0;
+let dailyGoal = 0;
 let shiftActive = false;
 let shiftStartTime = null;
 let shiftStartIncome = 0;
 let shiftTimerInterval = null;
-let shiftHistory = JSON.parse(localStorage.getItem('indriver_shifts')) || [];
+let shiftHistory = [];
+let shiftLiveIncome = 0;
+let shiftLiveExpense = 0;
+let isActivityExpanded = false;
+
+try {
+    incomes = JSON.parse(localStorage.getItem('indriver_incomes')) || [];
+} catch (e) {
+    console.warn('Corrupted incomes data, resetting');
+    localStorage.removeItem('indriver_incomes');
+}
+
+try {
+    expenses = JSON.parse(localStorage.getItem('indriver_expenses')) || [];
+} catch (e) {
+    console.warn('Corrupted expenses data, resetting');
+    localStorage.removeItem('indriver_expenses');
+}
+
+try {
+    dailyGoal = parseFloat(localStorage.getItem('indriver_daily_goal')) || 0;
+} catch (e) {
+    console.warn('Corrupted daily goal, resetting');
+    localStorage.removeItem('indriver_daily_goal');
+}
+
+try {
+    shiftHistory = JSON.parse(localStorage.getItem('indriver_shifts')) || [];
+} catch (e) {
+    console.warn('Corrupted shift history, resetting');
+    localStorage.removeItem('indriver_shifts');
+}
 
 // DOM Elements
 const inputEl = document.getElementById('income-input');
@@ -28,6 +59,9 @@ if (localStorage.getItem('indriver_shift_start')) {
     shiftActive = true;
     shiftStartTime = parseInt(localStorage.getItem('indriver_shift_start'));
     shiftTimerInterval = setInterval(updateShiftTimer, 1000);
+    // Initialize live sums from existing data
+    shiftLiveIncome = incomes.filter(inc => inc.id >= shiftStartTime).reduce((sum, item) => sum + item.amount, 0);
+    shiftLiveExpense = expenses.filter(exp => exp.id >= shiftStartTime).reduce((sum, item) => sum + item.amount, 0);
     updateShiftUI();
 }
 
@@ -43,22 +77,28 @@ function showSuccess(el) {
 }
 
 function addIncome(customAmount = null, suppressFocus = false) {
-    const amountVal = customAmount !== null ? customAmount : inputEl.value;
+    if (_addCooldown) return;
+    _addCooldown = true;
+    setTimeout(() => _addCooldown = false, 300);
 
-    if (!amountVal || amountVal <= 0) {
+    const amountVal = customAmount !== null ? customAmount : inputEl.value;
+    const amount = parseFloat(amountVal);
+
+    if (!amountVal || isNaN(amount) || amount <= 0) {
         showError(inputEl);
         return;
     }
 
     const newIncome = {
         id: Date.now(),
-        amount: parseFloat(amountVal),
+        amount: amount,
         date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     // Add to beginning of array
     incomes.unshift(newIncome);
     saveData();
+    if (shiftActive) shiftLiveIncome += newIncome.amount;
     render();
 
     // Reset and feedback
@@ -71,10 +111,15 @@ function addIncome(customAmount = null, suppressFocus = false) {
         inputEl.blur(); // Force close keyboard if chip was tapped
     }
     
+    inputEl.classList.add('scale-flash');
+    setTimeout(() => inputEl.classList.remove('scale-flash'), 200);
+    
     if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
 }
 
 let _chipCooldown = false;
+let _addCooldown = false;
+let _expenseCooldown = false;
 
 function addQuickFare(amount, btnEl) {
     if (_chipCooldown) return;
@@ -108,10 +153,25 @@ function deleteIncome(id) {
     const index = incomes.findIndex(inc => inc.id === id);
     if (index === -1) return;
     const deleted = incomes.splice(index, 1)[0];
-    saveData();
-    render();
-    showUndoToast(deleted, index, 'income');
-    if (navigator.vibrate) navigator.vibrate(40);
+    
+    // Find the li and animate out
+    const li = document.querySelector(`.income-item button[onclick*="deleteIncome(${id})"]`)?.parentElement;
+    if (li) {
+        li.classList.add('fade-out');
+        setTimeout(() => {
+            saveData();
+            if (shiftActive && deleted.id >= shiftStartTime) shiftLiveIncome -= deleted.amount;
+            render();
+            showUndoToast(deleted, index, 'income');
+            if (navigator.vibrate) navigator.vibrate(40);
+        }, 300);
+    } else {
+        saveData();
+        if (shiftActive && deleted.id >= shiftStartTime) shiftLiveIncome -= deleted.amount;
+        render();
+        showUndoToast(deleted, index, 'income');
+        if (navigator.vibrate) navigator.vibrate(40);
+    }
 }
 
 function confirmClear() {
@@ -141,17 +201,22 @@ function selectExpenseCategory(btnEl, category) {
 }
 
 function addExpense() {
+    if (_expenseCooldown) return;
+    _expenseCooldown = true;
+    setTimeout(() => _expenseCooldown = false, 300);
+
     const amountVal = expenseInputEl.value;
     const category = currentExpenseCategory;
+    const amount = parseFloat(amountVal);
 
-    if (!amountVal || amountVal <= 0) {
+    if (!amountVal || isNaN(amount) || amount <= 0) {
         showError(expenseInputEl);
         return;
     }
 
     const newExpense = {
         id: Date.now(),
-        amount: parseFloat(amountVal),
+        amount: amount,
         category: category,
         date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
@@ -159,6 +224,7 @@ function addExpense() {
     // Add to beginning of array
     expenses.unshift(newExpense);
     saveData();
+    if (shiftActive) shiftLiveExpense += newExpense.amount;
     render();
 
     // Reset and feedback
@@ -173,6 +239,9 @@ function addExpense() {
         fuelPill.classList.add('active');
     }
     
+    expenseInputEl.classList.add('scale-flash');
+    setTimeout(() => expenseInputEl.classList.remove('scale-flash'), 200);
+    
     expenseInputEl.focus(); // Faster subsequent entry
     if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
 }
@@ -181,10 +250,25 @@ function deleteExpense(id) {
     const index = expenses.findIndex(exp => exp.id === id);
     if (index === -1) return;
     const deleted = expenses.splice(index, 1)[0];
-    saveData();
-    render();
-    showUndoToast(deleted, index, 'expense');
-    if (navigator.vibrate) navigator.vibrate(40);
+    
+    // Find the li and animate out
+    const li = document.querySelector(`.expense-item button[onclick*="deleteExpense(${id})"]`)?.parentElement;
+    if (li) {
+        li.classList.add('fade-out');
+        setTimeout(() => {
+            saveData();
+            if (shiftActive && deleted.id >= shiftStartTime) shiftLiveExpense -= deleted.amount;
+            render();
+            showUndoToast(deleted, index, 'expense');
+            if (navigator.vibrate) navigator.vibrate(40);
+        }, 300);
+    } else {
+        saveData();
+        if (shiftActive && deleted.id >= shiftStartTime) shiftLiveExpense -= deleted.amount;
+        render();
+        showUndoToast(deleted, index, 'expense');
+        if (navigator.vibrate) navigator.vibrate(40);
+    }
 }
 
 // --- Undo Last Entry (from last-entry widget) ---
@@ -194,6 +278,7 @@ function undoLastEntry(id, type) {
         if (index === -1) return;
         const deleted = incomes.splice(index, 1)[0];
         saveData();
+        if (shiftActive && deleted.id >= shiftStartTime) shiftLiveIncome -= deleted.amount;
         render();
         showUndoToast(deleted, index, 'income');
     } else {
@@ -201,6 +286,7 @@ function undoLastEntry(id, type) {
         if (index === -1) return;
         const deleted = expenses.splice(index, 1)[0];
         saveData();
+        if (shiftActive && deleted.id >= shiftStartTime) shiftLiveExpense -= deleted.amount;
         render();
         showUndoToast(deleted, index, 'expense');
     }
@@ -218,8 +304,8 @@ function showUndoToast(entry, originalIndex, type) {
     const textEl = document.getElementById('undo-toast-text') || toastEl.querySelector('.undo-toast-text');
 
     const label = type === 'income'
-        ? `Fare ${entry.amount} EGP deleted`
-        : `${entry.category || 'Expense'} ${entry.amount} EGP deleted`;
+        ? `Fare +${entry.amount} EGP deleted`
+        : `${entry.category || 'Expense'} -${entry.amount} EGP deleted`;
     textEl.textContent = label;
 
     toastEl.classList.remove('hidden');
@@ -239,8 +325,10 @@ function undoDelete() {
 
     if (type === 'income') {
         incomes.splice(originalIndex, 0, entry);
+        if (shiftActive && entry.id >= shiftStartTime) shiftLiveIncome += entry.amount;
     } else {
         expenses.splice(originalIndex, 0, entry);
+        if (shiftActive && entry.id >= shiftStartTime) shiftLiveExpense += entry.amount;
     }
 
     saveData();
@@ -295,11 +383,13 @@ function render() {
         const todayStr = new Date().toLocaleDateString();
         const todayRides = incomes.filter(inc => inc.date.startsWith(todayStr));
         const todayEarnings = todayRides.reduce((sum, item) => sum + item.amount, 0);
+        const todayExpenses = expenses.filter(exp => exp.date.startsWith(todayStr));
+        const todayExpenseSum = todayExpenses.reduce((sum, item) => sum + item.amount, 0);
 
         const allEntries = [...incomes.map(i => ({...i, type: 'Fare'})), ...expenses.map(e => ({...e, type: 'Expense'}))].sort((a,b) => b.id - a.id);
         const lastEntry = allEntries[0];
 
-        let lastEntryHTML = '<div class="empty-state" style="padding:10px;text-align:center;color:var(--text-secondary);">No recent activity</div>';
+        let lastEntryHTML = '';
         if (lastEntry) {
             const isFare = lastEntry.type === 'Fare';
             
@@ -325,32 +415,121 @@ function render() {
             `;
         }
 
-        compactSummaryEl.innerHTML = `
-            <div class="daily-summary-widget" style="display:flex; gap:12px; margin-bottom:20px;">
-                <div class="summary-col" style="flex:1; background:#2C2C2C; padding:16px; border-radius:12px; text-align:center;">
+        // Build today's income list
+        let incomeListHTML = '';
+        if (todayRides.length > 0) {
+            incomeListHTML = todayRides.map(inc => `
+                <li class="income-item compact-item">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:700; color:var(--primary-color);">+${inc.amount} EGP</span>
+                        <span style="font-size:0.75rem; color:var(--text-secondary);">${inc.date.split(' ')[1]}</span>
+                    </div>
+                    <button class="compact-delete-btn" onclick="deleteIncome(${inc.id})">&#215;</button>
+                </li>
+            `).join('');
+        }
+
+        // Build today's expense list
+        let expenseListHTML = '';
+        if (todayExpenses.length > 0) {
+            expenseListHTML = todayExpenses.map(exp => `
+                <li class="expense-item compact-item">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:700; color:var(--expense-color);">-${exp.amount} EGP</span>
+                        <span style="font-size:0.75rem; color:var(--text-secondary);">${exp.category} • ${exp.date.split(' ')[1]}</span>
+                    </div>
+                    <button class="compact-delete-btn" onclick="deleteExpense(${exp.id})">&#215;</button>
+                </li>
+            `).join('');
+        }
+
+        incomeListHTML = todayRides.map((inc, index) => {
+            return `
+                <li class="compact-list-item">
+                    <div class="compact-item-meta">
+                        <span class="compact-item-amount income">+${inc.amount} EGP</span>
+                        <span class="compact-item-time">${inc.date.split(' ')[1]}</span>
+                    </div>
+                    <button class="compact-delete-btn" onclick="deleteIncome(${inc.id})">&#215;</button>
+                </li>
+            `;
+        }).join('');
+
+        expenseListHTML = todayExpenses.map((exp, index) => {
+            return `
+                <li class="compact-list-item">
+                    <div class="compact-item-meta">
+                        <span class="compact-item-amount expense">-${exp.amount} EGP</span>
+                        <span class="compact-item-time">${exp.category} • ${exp.date.split(' ')[1]}</span>
+                    </div>
+                    <button class="compact-delete-btn" onclick="deleteExpense(${exp.id})">&#215;</button>
+                </li>
+            `;
+        }).join('');
+
+        const summaryCardsHTML = `
+            <div class="daily-summary-widget">
+                <div class="summary-col">
                     <span style="display:block; font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Today's Rides</span>
                     <strong style="font-size:1.4rem;">${todayRides.length}</strong>
                 </div>
-                <div class="summary-col" style="flex:1; background:#2C2C2C; padding:16px; border-radius:12px; text-align:center;">
+                <div class="summary-col">
                     <span style="display:block; font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Today's Earnings</span>
                     <strong style="font-size:1.4rem; color:var(--primary-color)">${todayEarnings.toLocaleString()} <span style="font-size:0.9rem">EGP</span></strong>
                 </div>
             </div>
-            <div class="list-header" style="margin-bottom:12px;">
-                <h3 style="font-size:0.9rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Last Logged Entry</h3>
-            </div>
-            ${lastEntryHTML}
         `;
+
+        if (!shiftActive) {
+            compactSummaryEl.innerHTML = `
+                ${summaryCardsHTML}
+            `;
+        } else {
+            const expenseWord = todayExpenses.length === 1 ? 'expense' : 'expenses';
+            const badgeText = `${todayRides.length} rides · ${todayExpenses.length} ${expenseWord}`;
+            
+            const activityHTML = (todayRides.length === 0 && todayExpenses.length === 0)
+                ? `<div class="global-empty-state compact-activity-empty" style="margin-top: 12px;">
+                    <span>No rides or expenses logged yet.</span>
+                </div>`
+                : `
+                <div class="activity-toggle-row" onclick="toggleActivityLog()">
+                    <div class="activity-toggle-left">
+                        <div class="activity-dots">
+                            <div class="activity-dot green"></div>
+                            <div class="activity-dot green"></div>
+                            <div class="activity-dot orange"></div>
+                        </div>
+                        <span class="activity-toggle-label">Today's activity</span>
+                    </div>
+                    <div class="activity-toggle-right">
+                        <span class="activity-toggle-badge">${badgeText}</span>
+                        <span class="activity-toggle-chevron" id="activity-toggle-chevron" style="transform: rotate(${isActivityExpanded ? '180deg' : '0deg'})">▼</span>
+                    </div>
+                </div>
+                
+                <div class="activity-log-panel ${isActivityExpanded ? 'expanded' : ''}" id="activity-log-panel">
+                    <div class="activity-section-header">RIDES</div>
+                    <ul class="compact-list" style="margin-bottom:16px;">
+                        ${incomeListHTML || '<li class="compact-list-item"><span class="compact-item-time">No rides logged yet.</span></li>'}
+                    </ul>
+                    
+                    <div class="activity-section-header">EXPENSES</div>
+                    <ul class="compact-list">
+                        ${expenseListHTML || '<li class="compact-list-item"><span class="compact-item-time">No expenses logged yet.</span></li>'}
+                    </ul>
+                </div>
+            `;
+
+            compactSummaryEl.innerHTML = `
+                ${summaryCardsHTML}
+                ${activityHTML}
+            `;
+        }
     }
     
-    // We intentionally bypass old `#income-list` and `#expense-list` updates.
-    // The variables `listEl` and `expenseListEl` are securely cached in JS memory 
-    // and can safely swallow any updates without crashing even if discarded from DOM.
-    listEl.innerHTML = '';
-    expenseListEl.innerHTML = '';
-    
     // Update analytics if chart is initialized
-    if (chartInstance) {
+    if (typeof chartInstance !== 'undefined' && chartInstance) {
         renderAnalytics();
     }
     
@@ -358,18 +537,37 @@ function render() {
     renderGoal();
 }
 
-// Allow Enter key to submit
-inputEl.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        addIncome();
+function toggleActivityLog() {
+    isActivityExpanded = !isActivityExpanded;
+    const panel = document.getElementById('activity-log-panel');
+    const chevron = document.getElementById('activity-toggle-chevron');
+    if (panel && chevron) {
+        if (isActivityExpanded) {
+            panel.classList.add('expanded');
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            panel.classList.remove('expanded');
+            chevron.style.transform = 'rotate(0deg)';
+        }
     }
-});
+}
 
-expenseInputEl.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        addExpense();
-    }
-});
+// Allow Enter key to submit
+if (inputEl) {
+    inputEl.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addIncome();
+        }
+    });
+}
+
+if (expenseInputEl) {
+    expenseInputEl.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addExpense();
+        }
+    });
+}
 
 function exportCSV() {
     const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
@@ -787,11 +985,11 @@ function renderGoal() {
         document.getElementById('goal-status').textContent = 'Goal reached!';
         document.getElementById('goal-status').style.color = '#69F0AE';
     } else if (percent >= 70) {
-        document.getElementById('goal-bar-fill').style.backgroundColor = '#FF9800';
+        document.getElementById('goal-bar-fill').style.backgroundColor = '#FFB74D';
         document.getElementById('goal-status').textContent = percent.toFixed(0) + '% there — keep going';
-        document.getElementById('goal-status').style.color = '#FF9800';
+        document.getElementById('goal-status').style.color = '#FFB74D';
     } else {
-        document.getElementById('goal-bar-fill').style.backgroundColor = '#69F0AE';
+        document.getElementById('goal-bar-fill').style.backgroundColor = '#6B7280';
         document.getElementById('goal-status').textContent = percent.toFixed(0) + '% of daily goal';
         document.getElementById('goal-status').style.color = 'var(--text-secondary)';
     }
@@ -802,6 +1000,8 @@ function startShift() {
     
     shiftActive = true;
     shiftStartTime = Date.now();
+    shiftLiveIncome = 0;
+    shiftLiveExpense = 0;
     
     localStorage.setItem('indriver_shift_start', shiftStartTime);
     shiftTimerInterval = setInterval(updateShiftTimer, 1000);
@@ -970,10 +1170,8 @@ function updateShiftTimer() {
     
     document.getElementById('shift-timer-display').textContent = formattedTime;
     
-    // Live precise tracking of net earnings
-    const liveIncomes = incomes.filter(inc => inc.id >= shiftStartTime && inc.id <= now).reduce((sum, item) => sum + item.amount, 0);
-    const liveExpenses = expenses.filter(exp => exp.id >= shiftStartTime && exp.id <= now).reduce((sum, item) => sum + item.amount, 0);
-    const currentShiftEarnings = liveIncomes - liveExpenses;
+    // Use cached live sums for performance
+    const currentShiftEarnings = shiftLiveIncome - shiftLiveExpense;
     
     const currentHourly = elapsed > 60000 ? (currentShiftEarnings / (elapsed / 3600000)) : 0;
     
@@ -1002,12 +1200,20 @@ function updateShiftUI() {
         document.getElementById('shift-earnings-live').textContent = '0 EGP';
         document.getElementById('shift-hourly-live').textContent = '0 EGP/hr';
     }
+
+    render();
 }
 
 function renderShiftHistory() {
     const historyList = document.getElementById('shift-history-list');
+    const historyContainer = document.getElementById('history-container');
+    const isEmpty = shiftHistory.length === 0;
+
+    if (historyContainer) {
+        historyContainer.classList.toggle('is-empty', isEmpty);
+    }
     
-    if (shiftHistory.length === 0) {
+    if (isEmpty) {
         historyList.innerHTML = '<li class="empty-state">No completed shifts yet.</li>';
         return;
     }
@@ -1017,6 +1223,7 @@ function renderShiftHistory() {
     shiftHistory.slice().reverse().forEach(shift => {
         const li = document.createElement('li');
         li.className = 'shift-history-item';
+        const hourlyRate = Number.isFinite(shift.hourlyRate) ? shift.hourlyRate : 0;
         
         const startTime = new Date(shift.startTime);
         const formattedStart = startTime.toLocaleDateString() + ' ' + 
@@ -1064,7 +1271,7 @@ function renderShiftHistory() {
                 <span class="shift-item-duration" style="background:#2C2C2C; padding:4px 10px; border-radius:30px; font-size:0.8rem; font-weight:600;">${duration}</span>
             </div>
             
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:16px;">
                 <div style="display:flex; flex-direction:column; padding:10px; background:#1C2621; border-radius:8px;">
                     <span style="font-size:0.7rem; color:var(--primary-color); text-transform:uppercase; font-weight:700; opacity:0.8;">Net Earnings</span>
                     <span style="color:#FFF; font-weight:700; font-size:1.2rem; margin-top:4px;">${shift.earnings.toLocaleString()} <span style="font-size:0.8rem; color:var(--text-secondary)">EGP</span></span>
@@ -1073,6 +1280,11 @@ function renderShiftHistory() {
                 <div style="display:flex; flex-direction:column; padding:10px; background:#2A1F1F; border-radius:8px;">
                     <span style="font-size:0.7rem; color:var(--expense-color); text-transform:uppercase; font-weight:700; opacity:0.8;">Total Expenses</span>
                     <span style="color:#FFF; font-weight:700; font-size:1.2rem; margin-top:4px;">${totalExpenses.toLocaleString()} <span style="font-size:0.8rem; color:var(--text-secondary)">EGP</span></span>
+                </div>
+
+                <div style="display:flex; flex-direction:column; padding:10px; background:#1D2430; border-radius:8px;">
+                    <span style="font-size:0.7rem; color:#6FB6FF; text-transform:uppercase; font-weight:700; opacity:0.8;">Hourly Rate</span>
+                    <span style="color:#FFF; font-weight:700; font-size:1.2rem; margin-top:4px;">${hourlyRate.toLocaleString([], { maximumFractionDigits: 1 })} <span style="font-size:0.8rem; color:var(--text-secondary)">EGP/hr</span></span>
                 </div>
             </div>
             
@@ -1108,3 +1320,74 @@ window.addEventListener('load', function() {
         updateShiftUI();
     }
 });
+
+function confirmResetApp() {
+    document.getElementById('reset-modal').classList.remove('hidden');
+}
+
+function closeResetModal() {
+    document.getElementById('reset-modal').classList.add('hidden');
+}
+
+function executeResetApp() {
+    if (shiftTimerInterval) {
+        clearInterval(shiftTimerInterval);
+        shiftTimerInterval = null;
+    }
+    shiftActive = false;
+    shiftStartTime = null;
+
+    incomes = [];
+    expenses = [];
+    shiftHistory = [];
+    dailyGoal = 0;
+    shiftLiveIncome = 0;
+    shiftLiveExpense = 0;
+
+    localStorage.removeItem('indriver_incomes');
+    localStorage.removeItem('indriver_expenses');
+    localStorage.removeItem('indriver_shifts');
+    localStorage.removeItem('indriver_daily_goal');
+    localStorage.removeItem('indriver_shift_start');
+
+    updateShiftUI();
+    render();
+    renderShiftHistory();
+    renderGoal();
+    if (typeof chartInstance !== 'undefined' && chartInstance) {
+        renderAnalytics();
+    }
+
+    closeResetModal();
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+
+    const toastEl = document.getElementById('undo-toast');
+    if (toastEl) {
+        const textEl = toastEl.querySelector('.undo-toast-text');
+        const btnEl = document.getElementById('undo-toast-btn');
+        
+        const originalText = textEl.textContent;
+        const originalColor = textEl.style.color;
+        const originalBtnDisplay = btnEl ? btnEl.style.display : '';
+        
+        textEl.textContent = 'App reset successfully';
+        textEl.style.color = 'var(--color-income)';
+        if (btnEl) btnEl.style.display = 'none';
+        
+        toastEl.classList.remove('hidden', 'toast-exit');
+        void toastEl.offsetWidth;
+        toastEl.classList.add('toast-enter');
+        
+        setTimeout(() => {
+            toastEl.classList.remove('toast-enter');
+            toastEl.classList.add('toast-exit');
+            setTimeout(() => {
+                toastEl.classList.add('hidden');
+                toastEl.classList.remove('toast-exit');
+                textEl.textContent = originalText;
+                textEl.style.color = originalColor;
+                if (btnEl) btnEl.style.display = originalBtnDisplay;
+            }, 300);
+        }, 3000);
+    }
+}

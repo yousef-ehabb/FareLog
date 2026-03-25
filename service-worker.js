@@ -1,11 +1,11 @@
-const CACHE_NAME = 'indriver-income-v1';
+const CACHE_NAME = 'indriver-income-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './style.css',
-    './script.js',
+    './css/style.css?v=20260324-empty-state-fix',
+    './js/app.js?v=20260324-empty-state-fix',
     './manifest.json',
-    './icon.png', // Cache the icon
+    './assets/icon.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'
 ];
 
@@ -17,6 +17,7 @@ self.addEventListener('install', (event) => {
                 console.log('Opened cache');
                 return cache.addAll(ASSETS_TO_CACHE);
             })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -31,7 +32,7 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
